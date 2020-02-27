@@ -1,29 +1,11 @@
 
-# Seriously Data Analyst Problem Set Solution
+# Mini-Project
 ## Alari Varmann
 
 ## GAME PLAYER ANALYSIS problem
-
-We would like to analyse how far players of a game progress as a function of age. The age is
-measured as the number of days since game installation. The progress is measured as a player’s
-level number at the end of a day. Note that, in some situations, a player may have to return back
-to an earlier level and continue from there. More specifically, we would like to know the average
-progress by age for two groups of players
-• Those players who actually played the game at a certain age (active players)
-• All players including those who happened not to play at a certain age
-There are two data sets available to conduct the task
-• Installation events with fields: player_id, timestamp
-• Level completion events with fields: player_id, timestamp, level_number
-The outcome of the task should include
-(1) An SQL script with queries that calculate the average progress by age and insert the results
-into a table with fields: age, avg_level_active, avg_level_all
-(2) An R or Python script that reads data from the results table, plots a chart with the two
-progress curves and saves the chart as an image file
-(3) The image file
-
 ### Solution
 
-(1)
+
 ~~~sql
 create table public.all_comb as (
 	WITH myconstants (playeramount, ageamount) as (
@@ -188,7 +170,7 @@ if __name__ == "__main__":
 
 (3)
 
-![Player Progress](player_progress.png)
+![Player Progress](player_progress_age.png)
 
 ## 2. ELEVATOR SIMULATION PROBLEM
 
@@ -334,29 +316,38 @@ To find these elevators, we can find how many trips the elevator has taken using
  -- When using lag, we can use (n-1)/2 as the amount of movements where n is the amount of movement changes
  -- Have to subtract 1 because lag indicates also the changes from the 0th non-existing record
 
-WITH basedata as (
-		 SELECT elevator_id,ts, speed_indicator,EXTRACT(hour from ts) as event_hour,
-          -- assigns 1 whenever speed_indicator changes
-          case when lag(speed_indicator) over (order by ts) = speed_indicator
-               then 0 -- when the previous value coindices with the current value
-               else 1 -- when the previous and current value don't coincide
-          end as gradient
-       from EVENT_QUEUE
-    ),
-	-- movements_per_elevator outputs amount of movements as defined by changes in in the velocity state for each elevator
-	movements_per_elevator as
-	(select elevator_id,(sum(gradient)-1)/2 as movements
-    from
-  	basedata
-	group by elevator_id)
-	,
-	top_elevators as
-	(select elevator_id from movements_per_elevator where movements > 10*percentile_cont(0.5) within group ( order by elevator_id,movements ))
 
-	select movements_per_elevator.elevator_id,movements as total_movements -- elevator_speed_counter
-	from
-	movements_per_elevator
-	where movements_per_elevator.elevator_id in (select elevator_id from top_elevators)
+  ---0---0--0---- (2n registrations for n movements, so in general sum over 2 is amount of movements)
+  -- When using lag, we can use (n-1)/2 as the amount of movements where n is the amount of movement changes
+  -- Have to subtract 1 because lag indicates also the changes from the 0th non-existing record
+
+ -- 	select speed_indicator,counter,counter/lead(counter) over (order by speed_indicator) as standstill_ratio
+ -- 	from (
+ WITH basedata as (
+ 		 SELECT elevator_id,ts, speed_indicator,EXTRACT(hour from ts) as event_hour,
+           -- assigns 1 whenever speed_indicator changes
+           case when lag(speed_indicator) over (order by ts) = speed_indicator
+                then 0 -- when the previous value coindices with the current value
+                else 1 -- when the previous and current value don't coincide
+           end as gradient
+        from testdata
+     ),
+ 	-- movements_per_elevator outputs amount of movements as defined by changes in in the velocity state for each elevator
+ 	movements_per_elevator as
+ 	(select elevator_id,EXTRACT(hour from ts) as hour_,(sum(gradient)-1)/2 as movements
+     from
+   	basedata
+ 	group by elevator_id,hour_)
+ 	,
+ 	top_elevators as
+ 	(select elevator_id,hour_ from movements_per_elevator where movements >  10*percentile_cont(0.5) within group (order by movements desc ) over (partition by hour_))
+
+ 	select movements_per_elevator.elevator_id,hour_,movements as total_movements -- elevator_speed_counter
+ 	from
+ 	movements_per_elevator
+ 	where movements_per_elevator.elevator_id in (select elevator_id from top_elevators) and movements_per_elevator.hour_ in (select hour_ from top_elevators)
+
+
 
 ~~~
 
