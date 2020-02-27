@@ -23,7 +23,7 @@ progress curves and saves the chart as an image file
 
 ### Solution
 
-
+(1)
 ~~~sql
 create table public.all_comb as (
 	WITH myconstants (playeramount, ageamount) as (
