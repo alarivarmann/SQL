@@ -170,7 +170,7 @@ if __name__ == "__main__":
 
 (3)
 
-![Player Progress](player_progress_age.png)
+![Player Progress](player_progress.png)
 
 ## 2. ELEVATOR SIMULATION PROBLEM
 
